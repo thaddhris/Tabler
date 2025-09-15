@@ -22,14 +22,7 @@ export function ResizableSidebar({
   workspaceId,
   onWidthChange,
 }: ResizableSidebarProps) {
-  const [width, setWidth] = useState(() => {
-    // Load saved width for this workspace from localStorage
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
-      return saved ? Number.parseInt(saved, 10) : defaultWidth
-    }
-    return defaultWidth
-  })
+  const [width, setWidth] = useState(defaultWidth)
 
   const [isResizing, setIsResizing] = useState(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -37,15 +30,27 @@ export function ResizableSidebar({
   const startWidthRef = useRef(0)
   const prevWorkspaceIdRef = useRef(workspaceId)
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
+      if (saved) {
+        const savedWidth = Number.parseInt(saved, 10)
+        setWidth(savedWidth)
+      }
+    }
+  }, [workspaceId, defaultWidth])
+
   // Save width to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem(`sidebar-width-${workspaceId}`, width.toString())
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`sidebar-width-${workspaceId}`, width.toString())
+    }
     onWidthChange?.(width)
   }, [width, workspaceId, onWidthChange])
 
   // Load width when workspace changes
   useEffect(() => {
-    if (prevWorkspaceIdRef.current !== workspaceId) {
+    if (prevWorkspaceIdRef.current !== workspaceId && typeof window !== "undefined") {
       const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
       if (saved) {
         const savedWidth = Number.parseInt(saved, 10)
