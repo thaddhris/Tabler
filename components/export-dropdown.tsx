@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Download, FileText, Printer, FileJson, FileImage, File } from "lucide-react"
+import { Download, FileText, Printer, FileJson } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,14 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  exportToCSV,
-  exportToJSON,
-  exportToPDF,
-  exportToPNG,
-  printMultiView,
-  type ExportData,
-} from "@/lib/export-utils"
+import { exportToCSV, exportToJSON, printMultiView, type ExportData } from "@/lib/export-utils"
 
 interface ExportDropdownProps {
   data: ExportData[]
@@ -40,7 +33,7 @@ export function ExportDropdown({
 }: ExportDropdownProps) {
   const [isExporting, setIsExporting] = useState(false)
 
-  const handleExport = async (type: "csv" | "json" | "pdf" | "png" | "print") => {
+  const handleExport = async (type: "csv" | "json" | "print") => {
     setIsExporting(true)
 
     try {
@@ -50,12 +43,6 @@ export function ExportDropdown({
           break
         case "json":
           exportToJSON(data, filename)
-          break
-        case "pdf":
-          await exportToPDF(data, filename)
-          break
-        case "png":
-          await exportToPNG(data, filename)
           break
         case "print":
           if (printContainerId) {
@@ -86,15 +73,6 @@ export function ExportDropdown({
         <DropdownMenuItem onClick={() => handleExport("json")}>
           <FileJson className="h-4 w-4 mr-2" />
           Export as JSON
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => handleExport("pdf")}>
-          <File className="h-4 w-4 mr-2" />
-          Export as PDF
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport("png")}>
-          <FileImage className="h-4 w-4 mr-2" />
-          Export as PNG
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => handleExport("print")}>

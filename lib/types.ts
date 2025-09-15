@@ -1,4 +1,4 @@
-// Core data types for the Forms → Tables Workspaces App
+// Core data types for the Device Sensor Configuration → Charts Trending App
 
 export interface Workspace {
   id: string
@@ -18,37 +18,29 @@ export interface List {
   createdAt: Date
 }
 
-export interface Table {
+export interface Config {
   id: string
   listId: string
-  formId: string
   name: string
-  selectedFieldIds: string[]
-  primaryKeyFieldId: string
+  deviceId: string
+  sensorId: string
   isLocked: boolean
   createdAt: Date
 }
 
-export interface Form {
+export interface Device {
   id: string
   name: string
-  fields: Field[]
-  createdAt: Date
+  type: string
+  location?: string
 }
 
-export interface Field {
+export interface Sensor {
   id: string
-  formId: string
+  deviceId: string
   name: string
-  type: "text" | "number" | "date" | "boolean" | "enum"
-  options?: string[] // For enum fields
-}
-
-export interface Submission {
-  id: string
-  formId: string
-  timestamp: Date
-  values: Record<string, any>
+  type: "temperature" | "humidity" | "pressure" | "voltage" | "current" | "power" | "flow" | "level"
+  unit: string
 }
 
 export interface TimeRange {
@@ -57,13 +49,65 @@ export interface TimeRange {
   preset?: string
 }
 
-export interface TableFilter {
-  fieldId: string
+export interface ChartFilter {
+  sensorId: string
   operator: string
   value: any
 }
 
-export interface TableSort {
-  fieldId: string
-  direction: "asc" | "desc"
+export interface SensorData {
+  timestamp: Date
+  value: number
+  sensorId: string
+  deviceId: string
+}
+
+export interface ChartConfig {
+  type: "line" | "area" | "column" | "spline"
+  colors: string[]
+  yAxis: {
+    title: string
+    min?: number
+    max?: number
+  }
+}
+
+export interface ChartComment {
+  id: string
+  workspaceId: string
+  configId: string
+  timestamp: Date // The time point on the chart where comment was added
+  chartX: number // X coordinate on chart
+  chartY: number // Y coordinate on chart
+  value: number // The data value at that point
+  sensorId: string
+  deviceId: string
+  comment: string
+  author?: string
+  createdAt: Date
+  isVisible: boolean
+}
+
+export interface PlotLine {
+  id: string
+  configId: string
+  axis: "x" | "y" // x for time-based, y for value-based
+  value: number // timestamp for x-axis, numeric value for y-axis
+  color: string
+  width: number
+  dashStyle: "Solid" | "Dash" | "Dot" | "DashDot"
+  label: {
+    text: string
+    align: "left" | "center" | "right"
+    verticalAlign: "top" | "middle" | "bottom"
+  }
+  isVisible: boolean
+  createdAt: Date
+}
+
+export interface CommentHighlight {
+  commentId: string
+  startTime: Date
+  endTime: Date
+  configId: string
 }
