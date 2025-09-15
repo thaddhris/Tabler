@@ -6,91 +6,87 @@ import { useState } from "react"
 import {
   Plus,
   Settings,
-  ChevronDown,
-  ChevronRight,
   Folder,
+  Table,
   Monitor,
   GripVertical,
-  Edit2,
   X,
-  Trash2,
   ChevronLeft,
   MoreHorizontal,
   Info,
   Search,
   Building,
-  BarChart3,
+  Upload,
+  ChevronDown,
+  ChevronRight,
+  Trash2,
   Edit,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { ExportDropdown } from "./export-dropdown"
 import { getWorkspaceExportData, getListExportData } from "@/lib/export-utils"
 import { mockSubmissions, mockForms } from "@/lib/mock-data"
-import type { Workspace, List, TimeRange, Config } from "@/lib/types"
+import type { Workspace, Table as TableType, List, TimeRange } from "@/lib/types"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { WorkspaceSettingsDrawer } from "./workspace-settings-drawer"
-import { mockDevices, mockSensors } from "@/lib/mock-data"
-
-type ConfigType = Config & {
-  workspace?: Workspace
-  listName?: string
-}
+import { Badge } from "@/components/ui/badge"
 
 interface LeftNavigationBarProps {
   workspaces: Workspace[]
-  configs: ConfigType[] // Renamed from tables to configs
+  tables: TableType[]
   lists: List[]
   currentWorkspaceId: string
-  currentConfigId: string | null // Renamed from currentTableId
+  currentTableId: string | null
   multiViewMode: boolean
-  selectedConfigIds: string[] // Renamed from selectedTableIds
+  selectedTableIds: string[]
   timeRange?: TimeRange
   sidebarWidth?: number
   appMode: "edit" | "view"
+  currentViewName?: string | null
   onWorkspaceSelect: (workspaceId: string) => void
-  onConfigSelect: (configId: string) => void // Renamed from onTableSelect
-  onMultiViewConfigToggle: (configId: string, selected: boolean) => void // Renamed from onMultiViewTableToggle
+  onTableSelect: (tableId: string) => void
+  onMultiViewTableToggle: (tableId: string, selected: boolean) => void
   onCreateWorkspace: (name: string) => void
   onCreateList: (workspaceId: string, name: string) => string
-  onCreateConfig: (listId: string, name?: string) => string // Renamed from onCreateTable
+  onCreateTable: (listId: string, name?: string) => string
   onUpdateWorkspace: (id: string, updates: Partial<Workspace>) => void
   onWorkspaceSettingsUpdate?: (workspaceId: string, settings: any) => void
-  onMoveConfig?: (configId: string, newListId: string) => void // Renamed from onMoveTable
+  onMoveTable?: (tableId: string, newListId: string) => void
   onMoveList?: (listId: string, newWorkspaceId: string) => void
   onDeleteWorkspace?: (workspaceId: string) => void
   onDeleteList?: (listId: string) => void
-  onDeleteConfig?: (configId: string) => void // Renamed from onDeleteTable
+  onDeleteTable?: (tableId: string) => void
   isCollapsed?: boolean
   onCollapse?: () => void
 }
 
 export function LeftNavigationBar({
   workspaces,
-  configs, // Renamed from tables
+  tables,
   lists,
   currentWorkspaceId,
-  currentConfigId, // Renamed from currentTableId
+  currentTableId,
   multiViewMode,
-  selectedConfigIds, // Renamed from selectedTableIds
+  selectedTableIds,
   timeRange = { start: new Date(Date.now() - 24 * 60 * 60 * 1000), end: new Date(), preset: "Last 24h" },
   sidebarWidth = 320,
   appMode,
+  currentViewName,
   onWorkspaceSelect,
-  onConfigSelect, // Renamed from onTableSelect
-  onMultiViewConfigToggle, // Renamed from onMultiViewTableToggle
+  onTableSelect,
+  onMultiViewTableToggle,
   onCreateWorkspace,
   onCreateList,
-  onCreateConfig, // Renamed from onCreateTable
+  onCreateTable,
   onUpdateWorkspace,
   onWorkspaceSettingsUpdate,
-  onMoveConfig, // Renamed from onMoveTable
+  onMoveTable,
   onMoveList,
   onDeleteWorkspace,
   onDeleteList,
-  onDeleteConfig, // Renamed from onDeleteTable
+  onDeleteTable,
   isCollapsed = false,
   onCollapse,
 }: LeftNavigationBarProps) {
@@ -98,12 +94,12 @@ export function LeftNavigationBar({
   const [expandedLists, setExpandedLists] = useState<Set<string>>(new Set())
   const [creatingWorkspace, setCreatingWorkspace] = useState(false)
   const [creatingList, setCreatingList] = useState<string | null>(null)
-  const [creatingConfig, setCreatingConfig] = useState<string | null>(null) // Renamed from creatingTable
+  const [creatingTable, setCreatingTable] = useState<string | null>(null)
   const [renamingList, setRenamingList] = useState<string | null>(null)
   const [renamingTable, setRenamingTable] = useState<string | null>(null)
   const [newItemName, setNewItemName] = useState("")
   const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false)
-  const [draggedItem, setDraggedItem] = useState<{ type: "config" | "list"; id: string } | null>(null) // Updated drag type
+  const [draggedItem, setDraggedItem] = useState<{ type: "table" | "list"; id: string } | null>(null)
   const [dragOverTarget, setDragOverTarget] = useState<{ type: "list" | "workspace"; id: string } | null>(null)
   const [dragExpandedWorkspaces, setDragExpandedWorkspaces] = useState<Set<string>>(new Set())
   const [renamingWorkspace, setRenamingWorkspace] = useState<string | null>(null)
@@ -114,11 +110,9 @@ export function LeftNavigationBar({
   } | null>(null)
   const [workspaceSettingsDrawerId, setWorkspaceSettingsDrawerId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-
-  const [titleDisplayMode, setTitleDisplayMode] = useState<"config-name" | "device-name" | "device-id">(
-    // Updated display modes
-    "config-name",
-  )
+  const [_selectedTables, setSelectedTables] = useState<Set<string>>(selectedTableIds)
+  const [titleDisplayMode, setTitleDisplayMode] = useState<"table-name" | "device-id" | "device-name">("table-name")
+  const [_isCollapsed, setIsCollapsed] = useState(isCollapsed)
 
   const getDeviceInfo = (formId?: string) => {
     if (!formId) return { deviceId: "Unknown", deviceName: "Unknown Device", deviceType: "Unknown" }
@@ -145,31 +139,17 @@ export function LeftNavigationBar({
     return deviceMap[formId] || { deviceId: "DEV-001", deviceName: "Unknown Device", deviceType: "Unknown" }
   }
 
-  const getDeviceSensorInfo = (config: ConfigType) => {
-    const device = mockDevices.find((d) => d.id === config.deviceId)
-    const sensor = mockSensors.find((s) => s.id === config.sensorId)
-
-    return {
-      deviceId: device?.id || "Unknown",
-      deviceName: device?.name || "Unknown Device",
-      deviceType: device?.type || "Unknown",
-      sensorName: sensor?.name || "Unknown Sensor",
-      sensorType: sensor?.type || "unknown",
-      sensorUnit: sensor?.unit || "",
-    }
-  }
-
-  const getDisplayName = (config: ConfigType) => {
-    const deviceSensorInfo = getDeviceSensorInfo(config)
+  const getDisplayName = (table: TableType) => {
+    const deviceInfo = getDeviceInfo(table.formId)
 
     switch (titleDisplayMode) {
       case "device-id":
-        return deviceSensorInfo.deviceId
+        return deviceInfo.deviceId
       case "device-name":
-        return `${deviceSensorInfo.deviceName} - ${deviceSensorInfo.sensorName}`
-      case "config-name":
+        return deviceInfo.deviceName
+      case "table-name":
       default:
-        return config.name
+        return table.name
     }
   }
 
@@ -179,12 +159,13 @@ export function LeftNavigationBar({
   const isVeryNarrow = sidebarWidth < 200
   const isNarrow = sidebarWidth < 280
   const showCompactIcons = sidebarWidth < 250
+  const isMultiView = multiViewMode
 
   const getSearchResults = () => {
     if (!searchQuery.trim()) return null
 
     const query = searchQuery.toLowerCase()
-    const matchingConfigs: (ConfigType & { workspaceName: string; listName: string })[] = [] // Renamed from matchingTables
+    const matchingTables: (TableType & { workspaceName: string; listName: string })[] = []
     const matchingLists: ((typeof lists)[0] & { workspaceName: string })[] = []
     const matchingWorkspaces: typeof workspaces = []
 
@@ -203,22 +184,22 @@ export function LeftNavigationBar({
           matchingLists.push({ ...list, workspaceName: workspace.name })
         }
 
-        const listConfigs = configs.filter((c) => c.listId === list.id)
-        listConfigs.forEach((config) => {
-          const displayName = getDisplayName(config)
-          const deviceSensorInfo = getDeviceSensorInfo(config)
+        // Check tables in this list
+        const listTables = tables.filter((t) => t.listId === list.id)
+        listTables.forEach((table) => {
+          const displayName = getDisplayName(table)
+          const deviceInfo = getDeviceInfo(table.formId)
 
-          // Search based on current title display mode and config name
+          // Search based on current title display mode and table name
           const shouldMatch =
-            config.name.toLowerCase().includes(query) ||
+            table.name.toLowerCase().includes(query) ||
             displayName.toLowerCase().includes(query) ||
-            (titleDisplayMode === "device-id" && deviceSensorInfo.deviceId.toLowerCase().includes(query)) ||
-            (titleDisplayMode === "device-name" && deviceSensorInfo.deviceName.toLowerCase().includes(query)) ||
-            deviceSensorInfo.sensorName.toLowerCase().includes(query)
+            (titleDisplayMode === "device-id" && deviceInfo.deviceId.toLowerCase().includes(query)) ||
+            (titleDisplayMode === "device-name" && deviceInfo.deviceName.toLowerCase().includes(query))
 
           if (shouldMatch) {
-            matchingConfigs.push({
-              ...config,
+            matchingTables.push({
+              ...table,
               workspaceName: workspace.name,
               listName: list.name,
             })
@@ -227,7 +208,7 @@ export function LeftNavigationBar({
       })
     })
 
-    return { matchingConfigs, matchingLists, matchingWorkspaces } // Updated return object
+    return { matchingTables, matchingLists, matchingWorkspaces }
   }
 
   const searchResults = getSearchResults()
@@ -249,8 +230,8 @@ export function LeftNavigationBar({
 
         // Check tables in this workspace
         const workspaceListIds = workspaceLists.map((l) => l.id)
-        const hasMatchingTable = configs.some(
-          (config) => workspaceListIds.includes(config.listId) && config.name.toLowerCase().includes(query),
+        const hasMatchingTable = tables.some(
+          (table) => workspaceListIds.includes(table.listId) && table.name.toLowerCase().includes(query),
         )
         if (hasMatchingTable) return true
 
@@ -268,8 +249,8 @@ export function LeftNavigationBar({
       if (list.name.toLowerCase().includes(query)) return true
 
       // Check tables in this list
-      const hasMatchingTable = configs.some(
-        (config) => config.listId === list.id && config.name.toLowerCase().includes(query),
+      const hasMatchingTable = tables.some(
+        (table) => table.listId === list.id && table.name.toLowerCase().includes(query),
       )
       if (hasMatchingTable) return true
 
@@ -278,7 +259,7 @@ export function LeftNavigationBar({
   }
 
   const getFilteredTables = (listId: string) => {
-    const listTables = configs.filter((t) => t.listId === listId)
+    const listTables = tables.filter((t) => t.listId === listId)
     if (!searchQuery.trim()) return listTables
 
     const query = searchQuery.toLowerCase()
@@ -358,12 +339,15 @@ export function LeftNavigationBar({
     }
   }
 
-  const handleCreateConfig = (listId: string) => {
-    // Renamed from handleCreateTable
-    if (newItemName.trim()) {
-      onCreateConfig(listId, newItemName.trim())
-      setNewItemName("")
-      setCreatingConfig(null)
+  const handleCreateTable = (listId: string) => {
+    const tableName = newItemName.trim() || "New Table"
+    onCreateTable(listId, tableName)
+    setNewItemName("")
+    setCreatingTable(null)
+    const list = lists.find((l) => l.id === listId)
+    if (list) {
+      setExpandedWorkspaces(new Set([list.workspaceId]))
+      setExpandedLists(new Set([...expandedLists, listId]))
     }
   }
 
@@ -380,7 +364,7 @@ export function LeftNavigationBar({
 
   const handleRenameTable = (tableId: string) => {
     if (newItemName.trim()) {
-      const table = configs.find((t) => t.id === tableId)
+      const table = tables.find((t) => t.id === tableId)
       if (table) {
         table.name = newItemName.trim()
       }
@@ -397,7 +381,7 @@ export function LeftNavigationBar({
     }
   }
 
-  const handleDragStart = (e: React.DragEvent, type: "config" | "list", id: string) => {
+  const handleDragStart = (e: React.DragEvent, type: "table" | "list", id: string) => {
     setDraggedItem({ type, id })
     e.dataTransfer.effectAllowed = "move"
     e.dataTransfer.setData("text/plain", JSON.stringify({ type, id }))
@@ -435,7 +419,7 @@ export function LeftNavigationBar({
 
     if (!draggedItem) return
 
-    if (draggedItem.type === "config" && targetType === "workspace") {
+    if (draggedItem.type === "table" && targetType === "workspace") {
       // Find lists in target workspace
       const targetWorkspaceLists = lists.filter((l) => l.workspaceId === targetId)
 
@@ -443,19 +427,19 @@ export function LeftNavigationBar({
         // Create "List 1" if no lists exist in target workspace
         const newListId = onCreateList(targetId, "List 1")
         // Move table to the new list
-        if (onMoveConfig) {
-          onMoveConfig(draggedItem.id, newListId)
+        if (onMoveTable) {
+          onMoveTable(draggedItem.id, newListId)
         }
       } else {
         // Move to first list in workspace
-        if (onMoveConfig) {
-          onMoveConfig(draggedItem.id, targetWorkspaceLists[0].id)
+        if (onMoveTable) {
+          onMoveTable(draggedItem.id, targetWorkspaceLists[0].id)
         }
       }
-    } else if (draggedItem.type === "config" && targetType === "list" && onMoveConfig) {
-      const sourceTable = configs.find((t) => t.id === draggedItem.id)
+    } else if (draggedItem.type === "table" && targetType === "list" && onMoveTable) {
+      const sourceTable = tables.find((t) => t.id === draggedItem.id)
       if (sourceTable && sourceTable.listId !== targetId) {
-        onMoveConfig(draggedItem.id, targetId)
+        onMoveTable(draggedItem.id, targetId)
       }
     } else if (draggedItem.type === "list" && targetType === "workspace" && onMoveList) {
       const sourceList = lists.find((l) => l.id === draggedItem.id)
@@ -484,7 +468,7 @@ export function LeftNavigationBar({
     return dragOverTarget?.type === type && dragOverTarget?.id === id
   }
 
-  const isDragging = (type: "config" | "list", id: string) => {
+  const isDragging = (type: "table" | "list", id: string) => {
     return draggedItem?.type === type && draggedItem?.id === id
   }
 
@@ -499,7 +483,7 @@ export function LeftNavigationBar({
         onDeleteList?.(deleteConfirmation.id)
         break
       case "table":
-        onDeleteConfig?.(deleteConfirmation.id)
+        onDeleteTable?.(deleteConfirmation.id)
         break
     }
 
@@ -550,11 +534,13 @@ export function LeftNavigationBar({
                           <strong>Type:</strong> Workspace Container
                         </div>
                         <div>
+                          <strong>Lists:</strong> {lists.filter((l) => l.workspaceId === workspace.id).length}
+                        </div>
+                        <div>
                           <strong>Tables:</strong>{" "}
                           {
-                            configs.filter((t) =>
-                              lists.some((l) => l.id === t.listId && l.workspaceId === workspace.id),
-                            ).length
+                            tables.filter((t) => lists.some((l) => l.id === t.listId && l.workspaceId === workspace.id))
+                              .length
                           }
                         </div>
                       </div>
@@ -568,7 +554,7 @@ export function LeftNavigationBar({
                       <ExportDropdown
                         data={getWorkspaceExportData(
                           workspace.id,
-                          configs,
+                          tables,
                           lists,
                           timeRange,
                           mockSubmissions,
@@ -615,9 +601,12 @@ export function LeftNavigationBar({
                     <strong>Type:</strong> Workspace Container
                   </div>
                   <div>
+                    <strong>Lists:</strong> {lists.filter((l) => l.workspaceId === workspace.id).length}
+                  </div>
+                  <div>
                     <strong>Tables:</strong>{" "}
                     {
-                      configs.filter((t) => lists.some((l) => l.id === t.listId && l.workspaceId === workspace.id))
+                      tables.filter((t) => lists.some((l) => l.id === t.listId && l.workspaceId === workspace.id))
                         .length
                     }
                   </div>
@@ -627,7 +616,7 @@ export function LeftNavigationBar({
           </TooltipProvider>
 
           <ExportDropdown
-            data={getWorkspaceExportData(workspace.id, configs, lists, timeRange, mockSubmissions, mockForms)}
+            data={getWorkspaceExportData(workspace.id, tables, lists, timeRange, mockSubmissions, mockForms)}
             filename={`workspace-${workspace.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}`}
             variant="ghost"
             size="sm"
@@ -653,7 +642,7 @@ export function LeftNavigationBar({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <ExportDropdown
-                      data={getWorkspaceExportData(workspace.id, configs, lists, timeRange, mockSubmissions, mockForms)}
+                      data={getWorkspaceExportData(workspace.id, tables, lists, timeRange, mockSubmissions, mockForms)}
                       filename={`workspace-${workspace.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}`}
                       variant="ghost"
                       size="sm"
@@ -732,7 +721,7 @@ export function LeftNavigationBar({
     return (
       <div className="flex items-center gap-1">
         <ExportDropdown
-          data={getWorkspaceExportData(workspace.id, configs, lists, timeRange, mockSubmissions, mockForms)}
+          data={getWorkspaceExportData(workspace.id, tables, lists, timeRange, mockSubmissions, mockForms)}
           filename={`workspace-${workspace.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}`}
           variant="ghost"
           size="sm"
@@ -804,7 +793,19 @@ export function LeftNavigationBar({
                         <Info className="h-3 w-3" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Info</TooltipContent>
+                    <TooltipContent>
+                      <div className="text-xs">
+                        <div>
+                          <strong>List:</strong> {list.name}
+                        </div>
+                        <div>
+                          <strong>Type:</strong> Table Container
+                        </div>
+                        <div>
+                          <strong>Tables:</strong> {tables.filter((t) => t.listId === list.id).length}
+                        </div>
+                      </div>
+                    </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
 
@@ -812,7 +813,7 @@ export function LeftNavigationBar({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <ExportDropdown
-                        data={getListExportData(list.id, configs, timeRange, mockSubmissions, mockForms)}
+                        data={getListExportData(list.id, tables, timeRange, mockSubmissions, mockForms)}
                         filename={`list-${list.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}`}
                         variant="ghost"
                         size="sm"
@@ -831,19 +832,37 @@ export function LeftNavigationBar({
 
       return (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-5 w-5 p-0 hover:bg-accent"
-            onClick={(e) => {
-              e.stopPropagation()
-              // TODO: Show list info dialog
-            }}
-          >
-            <Info className="h-3 w-3" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 hover:bg-accent"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                  }}
+                >
+                  <Info className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs">
+                  <div>
+                    <strong>List:</strong> {list.name}
+                  </div>
+                  <div>
+                    <strong>Type:</strong> Table Container
+                  </div>
+                  <div>
+                    <strong>Tables:</strong> {tables.filter((t) => t.listId === list.id).length}
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <ExportDropdown
-            data={getListExportData(list.id, configs, timeRange, mockSubmissions, mockForms)}
+            data={getListExportData(list.id, tables, timeRange, mockSubmissions, mockForms)}
             filename={`list-${list.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}`}
             variant="ghost"
             size="sm"
@@ -869,7 +888,7 @@ export function LeftNavigationBar({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <ExportDropdown
-                      data={getListExportData(list.id, configs, timeRange, mockSubmissions, mockForms)}
+                      data={getListExportData(list.id, tables, timeRange, mockSubmissions, mockForms)}
                       filename={`list-${list.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}`}
                       variant="ghost"
                       size="sm"
@@ -896,7 +915,7 @@ export function LeftNavigationBar({
                         })
                       }}
                     >
-                      <Edit2 className="h-3 w-3" />
+                      <Edit className="h-3 w-3" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Rename</TooltipContent>
@@ -912,13 +931,13 @@ export function LeftNavigationBar({
                       className="h-8 w-8 p-0 hover:bg-accent"
                       onClick={(e) => {
                         e.stopPropagation()
-                        setCreatingConfig(list.id)
+                        setCreatingTable(list.id)
                       }}
                     >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Add Config</TooltipContent>
+                  <TooltipContent>Add Table</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
@@ -949,7 +968,7 @@ export function LeftNavigationBar({
     return (
       <div className="flex items-center gap-1">
         <ExportDropdown
-          data={getListExportData(list.id, configs, timeRange, mockSubmissions, mockForms)}
+          data={getListExportData(list.id, tables, timeRange, mockSubmissions, mockForms)}
           filename={`list-${list.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}`}
           variant="ghost"
           size="sm"
@@ -968,7 +987,7 @@ export function LeftNavigationBar({
             })
           }}
         >
-          <Edit2 className="h-3 w-3" />
+          <Edit className="h-3 w-3" />
         </Button>
         <Button
           variant="ghost"
@@ -976,7 +995,7 @@ export function LeftNavigationBar({
           className="h-5 w-5 p-0 hover:bg-accent"
           onClick={(e) => {
             e.stopPropagation()
-            setCreatingConfig(list.id)
+            setCreatingTable(list.id)
           }}
         >
           <Plus className="h-3 w-3" />
@@ -996,9 +1015,9 @@ export function LeftNavigationBar({
     )
   }
 
-  const ConfigActions = ({ config }: { config: ConfigType }) => {
+  const TableActions = ({ table }: { table: TableType }) => {
     if (appMode === "view") {
-      const deviceSensorInfo = getDeviceSensorInfo(config)
+      const deviceInfo = getDeviceInfo(table.formId)
 
       if (showCompactIcons) {
         return (
@@ -1027,16 +1046,13 @@ export function LeftNavigationBar({
                     <TooltipContent>
                       <div className="text-xs">
                         <div>
-                          <strong>Device:</strong> {deviceSensorInfo.deviceName}
+                          <strong>Device Name:</strong> {deviceInfo.deviceName}
                         </div>
                         <div>
-                          <strong>Sensor:</strong> {deviceSensorInfo.sensorName}
+                          <strong>Device ID:</strong> {deviceInfo.deviceId}
                         </div>
                         <div>
-                          <strong>Type:</strong> {deviceSensorInfo.sensorType}
-                        </div>
-                        <div>
-                          <strong>Unit:</strong> {deviceSensorInfo.sensorUnit}
+                          <strong>Type:</strong> {deviceInfo.deviceType}
                         </div>
                       </div>
                     </TooltipContent>
@@ -1067,16 +1083,13 @@ export function LeftNavigationBar({
               <TooltipContent>
                 <div className="text-xs">
                   <div>
-                    <strong>Device:</strong> {deviceSensorInfo.deviceName}
+                    <strong>Device Name:</strong> {deviceInfo.deviceName}
                   </div>
                   <div>
-                    <strong>Sensor:</strong> {deviceSensorInfo.sensorName}
+                    <strong>Device ID:</strong> {deviceInfo.deviceId}
                   </div>
                   <div>
-                    <strong>Type:</strong> {deviceSensorInfo.sensorType}
-                  </div>
-                  <div>
-                    <strong>Unit:</strong> {deviceSensorInfo.sensorUnit}
+                    <strong>Type:</strong> {deviceInfo.deviceType}
                   </div>
                 </div>
               </TooltipContent>
@@ -1106,6 +1119,8 @@ export function LeftNavigationBar({
                       className="h-8 w-8 p-0 hover:bg-accent"
                       onClick={(e) => {
                         e.stopPropagation()
+                        setNewItemName(table.name)
+                        setRenamingTable(table.id)
                       }}
                     >
                       <Edit className="h-3 w-3" />
@@ -1124,6 +1139,7 @@ export function LeftNavigationBar({
                       className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
                       onClick={(e) => {
                         e.stopPropagation()
+                        showDeleteConfirmation("table", table.id, table.name)
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -1146,6 +1162,8 @@ export function LeftNavigationBar({
           className="h-5 w-5 p-0 hover:bg-accent"
           onClick={(e) => {
             e.stopPropagation()
+            setNewItemName(table.name)
+            setRenamingTable(table.id)
           }}
         >
           <Edit className="h-3 w-3" />
@@ -1156,6 +1174,7 @@ export function LeftNavigationBar({
           className="h-5 w-5 p-0 hover:bg-destructive hover:text-destructive-foreground"
           onClick={(e) => {
             e.stopPropagation()
+            showDeleteConfirmation("table", table.id, table.name)
           }}
         >
           <Trash2 className="h-3 w-3" />
@@ -1176,12 +1195,35 @@ export function LeftNavigationBar({
   return (
     <>
       <div className="h-full flex flex-col bg-background">
-        <div className="p-2 border-b bg-background flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={onCollapse} className="h-8 w-8 p-0">
-            <ChevronLeft className="h-4 w-4" />
+        <div className="flex items-center justify-between p-4 border-b bg-background">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onCollapse?.()}
+            className="hover:bg-primary/10 transition-colors"
+          >
+            {_isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
-          {!isVeryNarrow && <h2 className="font-semibold text-lg text-foreground">Navigation</h2>}
-          {isVeryNarrow && <h2 className="font-semibold text-sm text-foreground">Nav</h2>}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <input
+                type="file"
+                accept=".xlsx,.csv"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                multiple
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs hover:bg-primary/10 transition-colors bg-transparent"
+              >
+                <Upload className="h-3 w-3 mr-1" />
+                {isVeryNarrow ? "Upload" : "Bulk upload"}
+              </Button>
+            </div>
+            {!isVeryNarrow && <h2 className="font-semibold text-lg text-foreground">Navigation</h2>}
+            {isVeryNarrow && <h2 className="font-semibold text-sm text-foreground">Nav</h2>}
+          </div>
         </div>
 
         <div className="p-4 border-b bg-background">
@@ -1200,7 +1242,7 @@ export function LeftNavigationBar({
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full justify-between bg-transparent">
                   <span className="text-xs">
-                    {titleDisplayMode === "config-name" && "Config Name"}
+                    {titleDisplayMode === "table-name" && "Table Name"}
                     {titleDisplayMode === "device-id" && "Device ID"}
                     {titleDisplayMode === "device-name" && "Device Name"}
                   </span>
@@ -1209,10 +1251,10 @@ export function LeftNavigationBar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-full">
                 <DropdownMenuItem
-                  onClick={() => setTitleDisplayMode("config-name")}
-                  className={titleDisplayMode === "config-name" ? "bg-accent" : ""}
+                  onClick={() => setTitleDisplayMode("table-name")}
+                  className={titleDisplayMode === "table-name" ? "bg-accent" : ""}
                 >
-                  Config Name
+                  Table Name
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setTitleDisplayMode("device-id")}
@@ -1247,36 +1289,38 @@ export function LeftNavigationBar({
           {searchResults ? (
             <div className="space-y-4 p-2">
               {/* Tables Section */}
-              {searchResults.matchingConfigs.length > 0 && (
+              {searchResults.matchingTables.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">
-                    Configs ({searchResults.matchingConfigs.length})
+                    {currentViewName
+                      ? `${currentViewName} (${searchResults.matchingTables.length})`
+                      : `Tables (${searchResults.matchingTables.length})`}
                   </h3>
                   <div className="space-y-1">
-                    {searchResults.matchingConfigs.map((config) => (
+                    {searchResults.matchingTables.map((table) => (
                       <div
-                        key={config.id}
+                        key={table.id}
                         className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                          currentConfigId === config.id ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                          currentTableId === table.id ? "bg-primary text-primary-foreground" : "hover:bg-accent"
                         }`}
                         onClick={() => {
-                          const list = lists.find((l) => l.id === config.listId)
+                          const list = lists.find((l) => l.id === table.listId)
                           if (list && list.workspaceId !== currentWorkspaceId) {
                             onWorkspaceSelect(list.workspaceId)
                           }
-                          onConfigSelect(config.id)
+                          onTableSelect(table.id)
                         }}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <BarChart3 className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                          <Table className="h-4 w-4 text-blue-500 flex-shrink-0" />
                           <div className="min-w-0">
-                            {renderTextWithOverflow(getDisplayName(config), "text-sm font-medium")}
+                            {renderTextWithOverflow(getDisplayName(table), "text-sm font-medium")}
                             <div className="text-xs text-muted-foreground">
-                              {config.workspaceName} / {config.listName}
+                              {table.workspaceName} / {table.listName}
                             </div>
                           </div>
                         </div>
-                        <ConfigActions config={config} />
+                        <TableActions table={table} />
                       </div>
                     ))}
                   </div>
@@ -1324,13 +1368,13 @@ export function LeftNavigationBar({
 
                         {expandedLists.has(list.id) && (
                           <div className="ml-6 space-y-1">
-                            {configs
+                            {tables
                               .filter((t) => t.listId === list.id)
-                              .map((config) => (
+                              .map((table) => (
                                 <div
-                                  key={config.id}
+                                  key={table.id}
                                   className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                                    currentConfigId === config.id
+                                    currentTableId === table.id
                                       ? "bg-primary text-primary-foreground"
                                       : "hover:bg-accent"
                                   }`}
@@ -1338,14 +1382,14 @@ export function LeftNavigationBar({
                                     if (list.workspaceId !== currentWorkspaceId) {
                                       onWorkspaceSelect(list.workspaceId)
                                     }
-                                    onConfigSelect(config.id)
+                                    onTableSelect(table.id)
                                   }}
                                 >
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <BarChart3 className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                    {renderTextWithOverflow(getDisplayName(config), "text-sm")}
+                                    <Table className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                    {renderTextWithOverflow(getDisplayName(table), "text-sm")}
                                   </div>
-                                  <ConfigActions config={config} />
+                                  <TableActions table={table} />
                                 </div>
                               ))}
                           </div>
@@ -1424,13 +1468,13 @@ export function LeftNavigationBar({
 
                                   {expandedLists.has(list.id) && (
                                     <div className="ml-6 space-y-1">
-                                      {configs
+                                      {tables
                                         .filter((t) => t.listId === list.id)
-                                        .map((config) => (
+                                        .map((table) => (
                                           <div
-                                            key={config.id}
+                                            key={table.id}
                                             className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                                              currentConfigId === config.id
+                                              currentTableId === table.id
                                                 ? "bg-primary text-primary-foreground"
                                                 : "hover:bg-accent"
                                             }`}
@@ -1438,14 +1482,14 @@ export function LeftNavigationBar({
                                               if (workspace.id !== currentWorkspaceId) {
                                                 onWorkspaceSelect(workspace.id)
                                               }
-                                              onConfigSelect(config.id)
+                                              onTableSelect(table.id)
                                             }}
                                           >
                                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                                              <BarChart3 className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                              {renderTextWithOverflow(getDisplayName(config), "text-sm")}
+                                              <Table className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                              {renderTextWithOverflow(getDisplayName(table), "text-sm")}
                                             </div>
-                                            <ConfigActions config={config} />
+                                            <TableActions table={table} />
                                           </div>
                                         ))}
                                     </div>
@@ -1461,7 +1505,7 @@ export function LeftNavigationBar({
               )}
 
               {/* No Results */}
-              {searchResults.matchingConfigs.length === 0 &&
+              {searchResults.matchingTables.length === 0 &&
                 searchResults.matchingLists.length === 0 &&
                 searchResults.matchingWorkspaces.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
@@ -1625,7 +1669,7 @@ export function LeftNavigationBar({
                     {expandedWorkspaces.has(workspace.id) && (
                       <div className="ml-4 space-y-1">
                         {filteredLists.map((list) => {
-                          const listConfigs = configs.filter((c) => c.listId === list.id) // Updated to use configs
+                          const listTables = tables.filter((t) => t.listId === list.id)
                           const shouldExpandList = expandedLists.has(list.id) || shouldAutoExpand(workspace.id, list.id)
 
                           return (
@@ -1680,30 +1724,30 @@ export function LeftNavigationBar({
                                 </div>
                               )}
 
-                              {creatingConfig === list.id && appMode === "edit" && (
+                              {creatingTable === list.id && appMode === "edit" && (
                                 <div className="ml-8 flex gap-2 mb-2 p-2 bg-muted rounded border">
                                   <Input
-                                    placeholder={isVeryNarrow ? "Name" : "Config name"}
+                                    placeholder={isVeryNarrow ? "Name" : "Table name"}
                                     value={newItemName}
                                     onChange={(e) => setNewItemName(e.target.value)}
                                     onKeyDown={(e) => {
-                                      if (e.key === "Enter") handleCreateConfig(list.id)
+                                      if (e.key === "Enter") handleCreateTable(list.id)
                                       if (e.key === "Escape") {
-                                        setCreatingConfig(null)
+                                        setCreatingTable(null)
                                         setNewItemName("")
                                       }
                                     }}
                                     autoFocus
                                     className="flex-1"
                                   />
-                                  <Button size="sm" onClick={() => handleCreateConfig(list.id)}>
+                                  <Button size="sm" onClick={() => handleCreateTable(list.id)}>
                                     Add
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      setCreatingConfig(null)
+                                      setCreatingTable(null)
                                       setNewItemName("")
                                     }}
                                   >
@@ -1712,38 +1756,82 @@ export function LeftNavigationBar({
                                 </div>
                               )}
 
+                              {isMultiView && expandedLists.has(list.id) && listTables.length > 1 && (
+                                <div className="flex items-center gap-1 px-4 py-1 bg-muted/30">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      const listTableIds = listTables.map((t) => t.id)
+                                      listTableIds.forEach((tableId) => {
+                                        if (!selectedTableIds.includes(tableId)) {
+                                          onMultiViewTableToggle(tableId, true)
+                                        }
+                                      })
+                                    }}
+                                    className="text-xs h-5 px-2"
+                                  >
+                                    Select All
+                                  </Button>
+                                  <span className="text-muted-foreground text-xs">•</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      const listTableIds = listTables.map((t) => t.id)
+                                      listTableIds.forEach((tableId) => {
+                                        if (selectedTableIds.includes(tableId)) {
+                                          onMultiViewTableToggle(tableId, false)
+                                        }
+                                      })
+                                    }}
+                                    className="text-xs h-5 px-2"
+                                  >
+                                    Clear All
+                                  </Button>
+                                </div>
+                              )}
+
                               {expandedLists.has(list.id) && (
                                 <div className="ml-4 space-y-1">
-                                  {listConfigs.map((config) => (
+                                  {listTables.map((table) => (
                                     <div
-                                      key={config.id}
+                                      key={table.id}
                                       className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                                        currentConfigId === config.id
+                                        currentTableId === table.id
                                           ? "bg-primary text-primary-foreground"
-                                          : "hover:bg-accent"
+                                          : selectedTableIds.includes(table.id) && multiViewMode
+                                            ? "bg-primary/10 border border-primary/20"
+                                            : "hover:bg-accent"
                                       }`}
-                                      onClick={() => onConfigSelect(config.id)}
+                                      onClick={() => {
+                                        if (appMode === "view") {
+                                          // In view mode, only allow single table selection, no multi-view toggle
+                                          onTableSelect(table.id)
+                                        } else if (multiViewMode) {
+                                          onMultiViewTableToggle(table.id, !selectedTableIds.includes(table.id))
+                                        } else {
+                                          onTableSelect(table.id)
+                                        }
+                                      }}
                                       draggable={appMode === "edit"}
-                                      onDragStart={(e) => appMode === "edit" && handleDragStart(e, "config", config.id)}
+                                      onDragStart={(e) => appMode === "edit" && handleDragStart(e, "table", table.id)}
                                       onDragOver={handleDragOver}
                                       onDrop={(e) => appMode === "edit" && handleDrop(e, "list", list.id)}
                                     >
                                       <div className="flex items-center gap-2 flex-1 min-w-0">
                                         <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" />
-                                        {multiViewMode && (
-                                          <Checkbox
-                                            checked={selectedConfigIds.includes(config.id)}
-                                            onCheckedChange={(checked) =>
-                                              onMultiViewConfigToggle(config.id, checked as boolean)
-                                            }
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="flex-shrink-0"
-                                          />
+                                        <Table className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                        {renderTextWithOverflow(getDisplayName(table), "text-sm")}
+                                        {multiViewMode && selectedTableIds.includes(table.id) && (
+                                          <Badge variant="secondary" className="text-xs ml-auto">
+                                            Selected
+                                          </Badge>
                                         )}
-                                        <BarChart3 className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                        {renderTextWithOverflow(getDisplayName(config), "text-sm")}
                                       </div>
-                                      <ConfigActions config={config} />
+                                      <TableActions table={table} />
                                     </div>
                                   ))}
                                 </div>

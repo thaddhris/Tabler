@@ -41,9 +41,7 @@ export function ResizableSidebar({
 
   // Save width to localStorage whenever it changes
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`sidebar-width-${workspaceId}`, width.toString())
-    }
+    localStorage.setItem(`sidebar-width-${workspaceId}`, width.toString())
     if (onWidthChange) {
       memoizedOnWidthChange(width)
     }
@@ -52,14 +50,10 @@ export function ResizableSidebar({
   // Load width when workspace changes
   useEffect(() => {
     if (prevWorkspaceIdRef.current !== workspaceId) {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
-        if (saved) {
-          const savedWidth = Number.parseInt(saved, 10)
-          setWidth(savedWidth)
-        } else {
-          setWidth(defaultWidth)
-        }
+      const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
+      if (saved) {
+        const savedWidth = Number.parseInt(saved, 10)
+        setWidth(savedWidth)
       } else {
         setWidth(defaultWidth)
       }

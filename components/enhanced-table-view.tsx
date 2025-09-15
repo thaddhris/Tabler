@@ -19,6 +19,7 @@ interface EnhancedTableViewProps {
   timeRange: TimeRange
   onUpdateTable: (updates: Partial<TableType>) => void
   compact?: boolean
+  workspace?: any // Added workspace prop for settings
   appMode?: "edit" | "view" // Added appMode prop to control device config visibility
 }
 
@@ -27,7 +28,8 @@ export function EnhancedTableView({
   timeRange,
   onUpdateTable,
   compact = false,
-  appMode = "edit",
+  workspace, // Added workspace parameter
+  appMode = "edit", // Added appMode parameter with default
 }: EnhancedTableViewProps) {
   const [pageSize, setPageSize] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
@@ -40,12 +42,13 @@ export function EnhancedTableView({
   const [tableSettingsOpen, setTableSettingsOpen] = useState(false)
   const [activeFilterField, setActiveFilterField] = useState<string | null>(null)
 
-  const workspace = table.workspace || {
-    settings: { fontSize: "medium", alignment: "left", fontWeight: "normal", lineHeight: 1.5, letterSpacing: 0 },
-  }
+  const workspaceSettings = workspace ||
+    table.workspace || {
+      settings: { fontSize: "medium", alignment: "left", fontWeight: "normal", lineHeight: 1.5, letterSpacing: 0 },
+    }
 
   const getWorkspaceStyles = () => {
-    const settings = workspace.settings
+    const settings = workspaceSettings.settings
     return {
       fontSize: settings.fontSize === "small" ? "12px" : settings.fontSize === "large" ? "16px" : "14px",
       textAlign: settings.alignment as "left" | "center" | "right",
@@ -355,7 +358,7 @@ export function EnhancedTableView({
   return (
     <>
       <div className="flex flex-col h-full">
-        {!compact && appMode === "edit" && <InlineTableConfig table={table} onUpdateTable={onUpdateTable} />}
+        {appMode === "edit" && <InlineTableConfig table={table} onUpdateTable={onUpdateTable} />}
 
         <div className="flex-1 overflow-hidden">
           <div className="space-y-6 p-6 h-full overflow-y-auto">
@@ -449,12 +452,20 @@ export function EnhancedTableView({
                           className="overflow-x-auto overflow-y-hidden border rounded-md"
                           style={{
                             width: "100%",
+                            maxWidth: "100%",
                             maxHeight: "70vh",
                             scrollbarWidth: "thin",
                             scrollbarColor: "var(--muted-foreground) var(--muted)",
                           }}
                         >
-                          <table className="border-collapse" style={{ ...workspaceStyles, minWidth: "100%" }}>
+                          <table
+                            className="border-collapse"
+                            style={{
+                              ...workspaceStyles,
+                              width: "max-content",
+                              minWidth: "100%",
+                            }}
+                          >
                             <thead className="bg-muted/30 border-b sticky top-0 z-10">
                               <tr>
                                 {orderedFields.map((field, index) => (
@@ -466,21 +477,22 @@ export function EnhancedTableView({
                                     style={{
                                       ...workspaceStyles,
                                       minWidth: "150px",
-                                      width: index === 0 ? "200px" : "auto",
+                                      width: index === 0 ? "200px" : "200px",
+                                      maxWidth: index === 0 ? "200px" : "300px",
                                       fontWeight:
-                                        workspace.settings.tableHeaderStyle === "bold"
+                                        workspaceSettings.settings.tableHeaderStyle === "bold"
                                           ? 700
                                           : workspaceStyles.fontWeight,
                                       backgroundColor:
                                         index === 0
                                           ? "var(--muted)"
-                                          : workspace.settings.tableHeaderStyle === "colored"
+                                          : workspaceSettings.settings.tableHeaderStyle === "colored"
                                             ? "var(--muted)"
                                             : undefined,
                                       padding:
-                                        workspace.settings.tableCellPadding === "tight"
+                                        workspaceSettings.settings.tableCellPadding === "tight"
                                           ? "8px"
-                                          : workspace.settings.tableCellPadding === "spacious"
+                                          : workspaceSettings.settings.tableCellPadding === "spacious"
                                             ? "16px"
                                             : "12px",
                                       boxShadow: index === 0 ? "2px 0 4px rgba(0,0,0,0.1)" : undefined,
@@ -557,9 +569,9 @@ export function EnhancedTableView({
                                   className={`border-t hover:bg-muted/20 transition-colors ${rowIndex % 2 === 0 ? "bg-background" : "bg-muted/10"}`}
                                   style={{
                                     height:
-                                      workspace.settings.tableRowHeight === "compact"
+                                      workspaceSettings.settings.tableRowHeight === "compact"
                                         ? "32px"
-                                        : workspace.settings.tableRowHeight === "comfortable"
+                                        : workspaceSettings.settings.tableRowHeight === "comfortable"
                                           ? "48px"
                                           : "40px",
                                   }}
@@ -573,20 +585,20 @@ export function EnhancedTableView({
                                       style={{
                                         ...workspaceStyles,
                                         minWidth: "150px",
-                                        width: colIndex === 0 ? "200px" : "auto",
+                                        width: colIndex === 0 ? "200px" : "200px",
                                         maxWidth: colIndex === 0 ? "200px" : "300px",
                                         padding:
-                                          workspace.settings.tableCellPadding === "tight"
+                                          workspaceSettings.settings.tableCellPadding === "tight"
                                             ? "8px"
-                                            : workspace.settings.tableCellPadding === "spacious"
+                                            : workspaceSettings.settings.tableCellPadding === "spacious"
                                               ? "16px"
                                               : "12px",
                                         borderStyle:
-                                          workspace.settings.tableBorderStyle === "none"
+                                          workspaceSettings.settings.tableBorderStyle === "none"
                                             ? "none"
-                                            : workspace.settings.tableBorderStyle === "dashed"
+                                            : workspaceSettings.settings.tableBorderStyle === "dashed"
                                               ? "dashed"
-                                              : workspace.settings.tableBorderStyle === "minimal"
+                                              : workspaceSettings.settings.tableBorderStyle === "minimal"
                                                 ? colIndex === 0
                                                   ? "solid"
                                                   : "none"

@@ -7,7 +7,6 @@ import { ChevronDown, Settings, Move, Eye, GripVertical, Users } from "lucide-re
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
 import { MoveTableDialog } from "./move-table-dialog"
 import { mockTables, mockForms, mockSubmissions } from "@/lib/mock-data"
 import type { List, Workspace } from "@/lib/types"
@@ -44,12 +43,13 @@ export function EnhancedListView({
 
   const listTables = mockTables.filter((t) => t.listId === list.id)
 
-  const handleTableSelection = (tableId: string, checked: boolean) => {
+  const handleTableClick = (tableId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
     let newSelection: string[]
-    if (checked) {
-      newSelection = [...selectedTableIds, tableId]
-    } else {
+    if (selectedTableIds.includes(tableId)) {
       newSelection = selectedTableIds.filter((id) => id !== tableId)
+    } else {
+      newSelection = [...selectedTableIds, tableId]
     }
     setSelectedTableIds(newSelection)
 
@@ -60,9 +60,17 @@ export function EnhancedListView({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedTableIds(listTables.map((t) => t.id))
+      const allTableIds = listTables.map((t) => t.id)
+      setSelectedTableIds(allTableIds)
+      // Trigger multi-view with all tables
+      setTimeout(() => onMultiView(allTableIds), 100)
     } else {
+      // Clear all selections and show last selected table if any
+      const lastSelected = selectedTableIds.length > 0 ? selectedTableIds[selectedTableIds.length - 1] : null
       setSelectedTableIds([])
+      if (lastSelected) {
+        setTimeout(() => onTableSelect(lastSelected), 100)
+      }
     }
   }
 
@@ -144,20 +152,7 @@ export function EnhancedListView({
       {listTables.length > 0 && (
         <div className="flex items-center justify-between p-4 bg-gradient-to-r from-muted/50 to-muted/30 rounded-lg border">
           <div className="flex items-center gap-3">
-            <Checkbox
-              checked={allSelected}
-              ref={(el) => {
-                if (el) el.indeterminate = someSelected
-              }}
-              onCheckedChange={handleSelectAll}
-            />
-            <span className="text-sm font-medium">
-              {allSelected
-                ? "Deselect all tables"
-                : someSelected
-                  ? "Select remaining tables"
-                  : "Select tables for automatic multi-view"}
-            </span>
+            <span className="text-sm font-medium">Click tables to select for multi-view</span>
             {selectedTableIds.length > 0 && (
               <Badge variant="outline" className="ml-2">
                 {selectedTableIds.length} of {listTables.length}
@@ -165,12 +160,24 @@ export function EnhancedListView({
             )}
           </div>
 
-          {selectedTableIds.length > 1 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Eye className="w-4 h-4" />
-              <span>Auto Multi-View Ready</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {listTables.length > 1 && (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => handleSelectAll(true)} className="text-xs h-6 px-2">
+                  Select All
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleSelectAll(false)} className="text-xs h-6 px-2">
+                  Clear All
+                </Button>
+              </>
+            )}
+            {selectedTableIds.length > 1 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground ml-2">
+                <Eye className="w-4 h-4" />
+                <span>Auto Multi-View Ready</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -184,7 +191,7 @@ export function EnhancedListView({
           return (
             <Card
               key={table.id}
-              className={`hover:shadow-md transition-all duration-200 ${
+              className={`hover:shadow-md transition-all duration-200 cursor-pointer ${
                 isSelected ? "ring-2 ring-primary bg-primary/5" : ""
               } ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${
                 dragOverIndex === index ? "border-primary" : ""
@@ -194,28 +201,34 @@ export function EnhancedListView({
               onDragOver={(e) => handleDragOver(e, index)}
               onDragEnd={handleDragEnd}
               onDrop={handleDrop}
+              onClick={(e) => handleTableClick(table.id, e)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleTableSelection(table.id, checked as boolean)}
-                    />
                     <div className="cursor-grab active:cursor-grabbing">
                       <GripVertical className="w-4 h-4 text-muted-foreground mt-1" />
                     </div>
                     <div className="flex-1">
-                      <CardTitle className="text-lg">{table.name}</CardTitle>
-                      {isSelected && (
-                        <Badge variant="secondary" className="mt-1 text-xs">
-                          <Eye className="w-3 h-3 mr-1" />
-                          Selected for Multi-View
-                        </Badge>
-                      )}
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {table.name}
+                        {isSelected && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Eye className="w-3 h-3 mr-1" />
+                            Selected
+                          </Badge>
+                        )}
+                      </CardTitle>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => toggleCardExpansion(table.id)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleCardExpansion(table.id)
+                    }}
+                  >
                     <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                   </Button>
                 </div>

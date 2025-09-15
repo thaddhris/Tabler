@@ -1,11 +1,19 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
+import { Outfit, Fira_Code } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 import "./globals.css"
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+})
+
+const firaCode = Fira_Code({
+  subsets: ["latin"],
+  variable: "--font-fira-code",
+})
 
 export const metadata: Metadata = {
   title: "v0 App",
@@ -20,13 +28,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className={`font-sans ${outfit.variable} ${firaCode.variable}`}>
         <Suspense fallback={null}>
           <ThemeProvider defaultTheme="system" storageKey="tabler-app-theme">
             {children}
           </ThemeProvider>
         </Suspense>
-        <Analytics />
       </body>
     </html>
   )
