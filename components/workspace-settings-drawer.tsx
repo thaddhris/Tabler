@@ -36,63 +36,6 @@ export function WorkspaceSettingsDrawer({
   const [tableRowHeight, setTableRowHeight] = useState(workspace.settings.tableRowHeight || "medium")
   const [tableCellPadding, setTableCellPadding] = useState(workspace.settings.tableCellPadding || "normal")
   const [tableHeaderStyle, setTableHeaderStyle] = useState(workspace.settings.tableHeaderStyle || "default")
-  const [headerBackgroundColor, setHeaderBackgroundColor] = useState(
-    workspace.settings.headerBackgroundColor || "#f1f5f9",
-  )
-
-  const colorOptions = [
-    { value: "#f1f5f9", label: "Slate", category: "Grays" },
-    { value: "#f8fafc", label: "Slate Light", category: "Grays" },
-    { value: "#e2e8f0", label: "Slate Medium", category: "Grays" },
-    { value: "#64748b", label: "Slate Dark", category: "Grays" },
-    { value: "#f9fafb", label: "Gray Light", category: "Grays" },
-    { value: "#e5e7eb", label: "Gray Medium", category: "Grays" },
-    { value: "#6b7280", label: "Gray Dark", category: "Grays" },
-    { value: "#fef2f2", label: "Red Light", category: "Reds" },
-    { value: "#fecaca", label: "Red Medium", category: "Reds" },
-    { value: "#f97316", label: "Red", category: "Reds" },
-    { value: "#dc2626", label: "Red Dark", category: "Reds" },
-    { value: "#fff7ed", label: "Orange Light", category: "Oranges" },
-    { value: "#fed7aa", label: "Orange Medium", category: "Oranges" },
-    { value: "#f97316", label: "Orange", category: "Oranges" },
-    { value: "#ea580c", label: "Orange Dark", category: "Oranges" },
-    { value: "#fefce8", label: "Yellow Light", category: "Yellows" },
-    { value: "#fde047", label: "Yellow Medium", category: "Yellows" },
-    { value: "#eab308", label: "Yellow", category: "Yellows" },
-    { value: "#ca8a04", label: "Yellow Dark", category: "Yellows" },
-    { value: "#f0fdf4", label: "Green Light", category: "Greens" },
-    { value: "#bbf7d0", label: "Green Medium", category: "Greens" },
-    { value: "#22c55e", label: "Green", category: "Greens" },
-    { value: "#16a34a", label: "Green Dark", category: "Greens" },
-    { value: "#ecfdf5", label: "Emerald Light", category: "Greens" },
-    { value: "#a7f3d0", label: "Emerald Medium", category: "Greens" },
-    { value: "#10b981", label: "Emerald", category: "Greens" },
-    { value: "#059669", label: "Emerald Dark", category: "Greens" },
-    { value: "#f0fdfa", label: "Teal Light", category: "Blues" },
-    { value: "#99f6e4", label: "Teal Medium", category: "Blues" },
-    { value: "#14b8a6", label: "Teal", category: "Blues" },
-    { value: "#0d9488", label: "Teal Dark", category: "Blues" },
-    { value: "#eff6ff", label: "Blue Light", category: "Blues" },
-    { value: "#bfdbfe", label: "Blue Medium", category: "Blues" },
-    { value: "#3b82f6", label: "Blue", category: "Blues" },
-    { value: "#2563eb", label: "Blue Dark", category: "Blues" },
-    { value: "#eef2ff", label: "Indigo Light", category: "Purples" },
-    { value: "#c7d2fe", label: "Indigo Medium", category: "Purples" },
-    { value: "#6366f1", label: "Indigo", category: "Purples" },
-    { value: "#4f46e5", label: "Indigo Dark", category: "Purples" },
-    { value: "#faf5ff", label: "Purple Light", category: "Purples" },
-    { value: "#ddd6fe", label: "Purple Medium", category: "Purples" },
-    { value: "#a855f7", label: "Purple", category: "Purples" },
-    { value: "#9333ea", label: "Purple Dark", category: "Purples" },
-    { value: "#fdf2f8", label: "Pink Light", category: "Pinks" },
-    { value: "#fbcfe8", label: "Pink Medium", category: "Pinks" },
-    { value: "#ec4899", label: "Pink", category: "Pinks" },
-    { value: "#db2777", label: "Pink Dark", category: "Pinks" },
-    { value: "#fff1f2", label: "Rose Light", category: "Pinks" },
-    { value: "#fecdd3", label: "Rose Medium", category: "Pinks" },
-    { value: "#f43f5e", label: "Rose", category: "Pinks" },
-    { value: "#e11d48", label: "Rose Dark", category: "Pinks" },
-  ]
 
   const handleApply = () => {
     console.log("[v0] Applying workspace settings:", {
@@ -105,7 +48,6 @@ export function WorkspaceSettingsDrawer({
       tableRowHeight,
       tableCellPadding,
       tableHeaderStyle,
-      headerBackgroundColor,
     })
 
     const newSettings = {
@@ -118,7 +60,6 @@ export function WorkspaceSettingsDrawer({
       tableRowHeight,
       tableCellPadding,
       tableHeaderStyle,
-      headerBackgroundColor,
     }
 
     onUpdateWorkspace({
@@ -335,39 +276,6 @@ export function WorkspaceSettingsDrawer({
                 </SelectContent>
               </Select>
             </div>
-
-            {tableHeaderStyle === "colored" && (
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Header Background Color</Label>
-                <Select value={headerBackgroundColor} onValueChange={setHeaderBackgroundColor}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded border" style={{ backgroundColor: headerBackgroundColor }} />
-                        <span>{colorOptions.find((c) => c.value === headerBackgroundColor)?.label || "Custom"}</span>
-                      </div>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {["Grays", "Reds", "Oranges", "Yellows", "Greens", "Blues", "Purples", "Pinks"].map((category) => (
-                      <div key={category}>
-                        <div className="px-2 py-1 text-xs font-medium text-muted-foreground border-b">{category}</div>
-                        {colorOptions
-                          .filter((color) => color.category === category)
-                          .map((color) => (
-                            <SelectItem key={color.value} value={color.value}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded border" style={{ backgroundColor: color.value }} />
-                                <span>{color.label}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
 
           <Separator />
@@ -382,12 +290,10 @@ export function WorkspaceSettingsDrawer({
                   ${fontSize === "small" ? "text-sm" : fontSize === "large" ? "text-lg" : "text-base"}
                   ${alignment === "center" ? "text-center" : alignment === "right" ? "text-right" : "text-left"}
                   ${tableHeaderStyle === "bold" ? "font-bold" : "font-medium"}
-                  ${tableHeaderStyle === "colored" ? `px-2 py-1 rounded` : ""}
+                  ${tableHeaderStyle === "colored" ? "bg-muted px-2 py-1 rounded" : ""}
                   border-b pb-2
                 `}
                 style={{
-                  backgroundColor: tableHeaderStyle === "colored" ? headerBackgroundColor : "transparent",
-                  color: tableHeaderStyle === "colored" ? "#000" : "inherit",
                   fontWeight:
                     tableHeaderStyle === "bold"
                       ? 700
