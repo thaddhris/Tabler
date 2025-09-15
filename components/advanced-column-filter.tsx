@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface FilterValue {
   value: string
@@ -36,6 +37,9 @@ export function AdvancedColumnFilter({
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["values"]))
   const [position, setPosition] = useState({ top: 0, left: 0, maxHeight: 400 })
+  const [selectedCondition, setSelectedCondition] = useState("none")
+  const [conditionValue, setConditionValue] = useState("")
+  const [conditionValue2, setConditionValue2] = useState("") // For "between" conditions
   const filterRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -60,11 +64,91 @@ export function AdvancedColumnFilter({
         left = viewportWidth - 320 - 20
       }
 
-      setPosition({ top, left, maxHeight: Math.max(300, maxHeight) })
+      setPosition({ top, left, width: Math.min(320, window.innerWidth - 40), maxHeight: Math.max(300, maxHeight) })
     }
   }, [anchorElement])
 
-  const filteredValues = values.filter((item) => item.label.toLowerCase().includes(searchTerm.toLowerCase()))
+  const getFilterConditions = () => {
+    const baseConditions = [
+      { value: "none", label: "None" },
+      { value: "is_empty", label: "is empty" },
+      { value: "is_not_empty", label: "is not empty" },
+    ]
+
+    switch (fieldType) {
+      case "text":
+        return [
+          ...baseConditions,
+          { value: "text_contains", label: "Text contains" },
+          { value: "text_does_not_contain", label: "Text does not contain" },
+          { value: "text_starts_with", label: "Text starts with" },
+          { value: "text_ends_with", label: "Text ends with" },
+          { value: "is_equal_to", label: "is equal to" },
+          { value: "is_not_equal_to", label: "is not equal to" },
+        ]
+      case "number":
+        return [
+          ...baseConditions,
+          { value: "greater_than", label: "Greater than" },
+          { value: "greater_than_or_equal", label: "Greater than or equal to" },
+          { value: "less_than", label: "Less than" },
+          { value: "less_than_or_equal", label: "Less than or equal to" },
+          { value: "is_equal_to", label: "is equal to" },
+          { value: "is_not_equal_to", label: "is not equal to" },
+          { value: "is_between", label: "is between" },
+          { value: "is_not_between", label: "is not between" },
+        ]
+      case "date":
+        return [
+          ...baseConditions,
+          { value: "date_is", label: "Date is" },
+          { value: "date_is_before", label: "Date is before" },
+          { value: "date_is_after", label: "Date is after" },
+          { value: "is_between", label: "is between" },
+          { value: "is_not_between", label: "is not between" },
+          { value: "date_validated", label: "Date validated" },
+          { value: "date_not_validated", label: "Date not validated" },
+        ]
+      default:
+        return [
+          ...baseConditions,
+          { value: "is_equal_to", label: "is equal to" },
+          { value: "is_not_equal_to", label: "is not equal to" },
+          { value: "custom_formula", label: "Custom formula" },
+        ]
+    }
+  }
+
+  const needsInput = (condition: string) => {
+    return !["none", "is_empty", "is_not_empty", "date_validated", "date_not_validated"].includes(condition)
+  }
+
+  const needsTwoInputs = (condition: string) => {
+    return ["is_between", "is_not_between"].includes(condition)
+  }
+
+  const getInputType = () => {
+    switch (fieldType) {
+      case "number":
+        return "number"
+      case "date":
+        return "date"
+      default:
+        return "text"
+    }
+  }
+
+  const handleConditionApply = () => {
+    console.log("[v0] Applying filter condition:", {
+      condition: selectedCondition,
+      value: conditionValue,
+      value2: conditionValue2,
+      fieldName,
+      fieldType,
+    })
+    // Here you would implement the actual filtering logic
+    onClose()
+  }
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
@@ -77,10 +161,10 @@ export function AdvancedColumnFilter({
   }
 
   const handleSelectAll = () => {
-    if (selectedValues.length === filteredValues.length) {
+    if (selectedValues.length === values.length) {
       onSelectionChange([])
     } else {
-      onSelectionChange(filteredValues.map((v) => v.value))
+      onSelectionChange(values.map((v) => v.value))
     }
   }
 
@@ -104,6 +188,8 @@ export function AdvancedColumnFilter({
         return ["Sort A to Z", "Sort Z to A"]
     }
   }
+
+  const filteredValues = values.filter((item) => item.label.toLowerCase().includes(searchTerm.toLowerCase()))
 
   return (
     <>
@@ -156,8 +242,47 @@ export function AdvancedColumnFilter({
               </Button>
 
               {expandedSections.has("condition") && (
-                <div className="ml-4 space-y-2 p-2 bg-muted/30 rounded">
-                  <p className="text-xs text-muted-foreground">Advanced filtering conditions will be available here</p>
+                <div className="ml-4 space-y-3 p-3 bg-muted/30 rounded">
+                  <div className="space-y-2">
+                    <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue placeholder="Select condition..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getFilterConditions().map((condition) => (
+                          <SelectItem key={condition.value} value={condition.value}>
+                            {condition.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {needsInput(selectedCondition) && (
+                      <Input
+                        type={getInputType()}
+                        placeholder={`Enter ${fieldType === "date" ? "date" : fieldType === "number" ? "number" : "text"}...`}
+                        value={conditionValue}
+                        onChange={(e) => setConditionValue(e.target.value)}
+                        className="h-8"
+                      />
+                    )}
+
+                    {needsTwoInputs(selectedCondition) && (
+                      <Input
+                        type={getInputType()}
+                        placeholder={`Enter second ${fieldType === "date" ? "date" : fieldType === "number" ? "number" : "text"}...`}
+                        value={conditionValue2}
+                        onChange={(e) => setConditionValue2(e.target.value)}
+                        className="h-8"
+                      />
+                    )}
+
+                    {selectedCondition !== "none" && (
+                      <Button size="sm" className="w-full h-8" onClick={handleConditionApply}>
+                        Apply Condition
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
             </>
