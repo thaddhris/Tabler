@@ -17,19 +17,12 @@ interface ResizableSidebarProps {
 export function ResizableSidebar({
   children,
   defaultWidth = 320,
-  minWidth = 200,
+  minWidth = 280,
   maxWidth = 600,
   workspaceId,
   onWidthChange,
 }: ResizableSidebarProps) {
-  const [width, setWidth] = useState(() => {
-    // Load saved width for this workspace from localStorage
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
-      return saved ? Number.parseInt(saved, 10) : defaultWidth
-    }
-    return defaultWidth
-  })
+  const [width, setWidth] = useState(defaultWidth)
 
   const [isResizing, setIsResizing] = useState(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -37,29 +30,31 @@ export function ResizableSidebar({
   const startWidthRef = useRef(0)
   const prevWorkspaceIdRef = useRef(workspaceId)
 
-  const memoizedOnWidthChange = useCallback(onWidthChange || (() => {}), [onWidthChange])
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
+      if (saved) {
+        const savedWidth = Number.parseInt(saved, 10)
+        setWidth(savedWidth)
+      }
+    }
+  }, [workspaceId, defaultWidth])
 
   // Save width to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(`sidebar-width-${workspaceId}`, width.toString())
     }
-    if (onWidthChange) {
-      memoizedOnWidthChange(width)
-    }
-  }, [width, workspaceId, memoizedOnWidthChange, onWidthChange])
+    onWidthChange?.(width)
+  }, [width, workspaceId, onWidthChange])
 
   // Load width when workspace changes
   useEffect(() => {
-    if (prevWorkspaceIdRef.current !== workspaceId) {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
-        if (saved) {
-          const savedWidth = Number.parseInt(saved, 10)
-          setWidth(savedWidth)
-        } else {
-          setWidth(defaultWidth)
-        }
+    if (prevWorkspaceIdRef.current !== workspaceId && typeof window !== "undefined") {
+      const saved = localStorage.getItem(`sidebar-width-${workspaceId}`)
+      if (saved) {
+        const savedWidth = Number.parseInt(saved, 10)
+        setWidth(savedWidth)
       } else {
         setWidth(defaultWidth)
       }
